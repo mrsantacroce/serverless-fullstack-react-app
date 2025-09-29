@@ -1,8 +1,7 @@
-'use strict';
+const { DeleteCommand } = require('@aws-sdk/lib-dynamodb');
+const docClient = require('./dynamodb');
 
-const dynamodb = require('./dynamodb');
-
-module.exports.delete = (event, context, callback) => {
+module.exports.delete = async (event) => {
   const params = {
     TableName: process.env.DYNAMODB_TABLE,
     Key: {
@@ -10,24 +9,25 @@ module.exports.delete = (event, context, callback) => {
     },
   };
 
-  // delete the todo from the database
-  dynamodb.delete(params, (error) => {
-    // handle potential errors
-    if (error) {
-      console.error(error);
-      callback(null, {
-        statusCode: error.statusCode || 501,
-        headers: { 'Content-Type': 'text/plain' },
-        body: 'Couldn\'t remove the todo item.',
-      });
-      return;
-    }
-
-    // create a response
-    const response = {
+  try {
+    await docClient.send(new DeleteCommand(params));
+    return {
       statusCode: 200,
-      body: JSON.stringify({}),
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ message: 'Todo item deleted successfully.' }),
     };
-    callback(null, response);
-  });
+  } catch (error) {
+    console.error(error);
+    return {
+      statusCode: error.statusCode || 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ error: 'Couldn\'t remove the todo item.' }),
+    };
+  }
 };

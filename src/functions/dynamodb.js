@@ -1,9 +1,7 @@
-'use strict';
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient } = require('@aws-sdk/lib-dynamodb');
 
-const AWS = require('aws-sdk'); // eslint-disable-line import/no-extraneous-dependencies
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
 
-let options = {};
-
-const client = new AWS.DynamoDB.DocumentClient(options);
-
-module.exports = client;
+module.exports = docClient;

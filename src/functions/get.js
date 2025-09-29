@@ -1,8 +1,7 @@
-'use strict';
+const { GetCommand } = require('@aws-sdk/lib-dynamodb');
+const docClient = require('./dynamodb');
 
-const dynamodb = require('./dynamodb');
-
-module.exports.get = (event, context, callback) => {
+module.exports.get = async (event) => {
   const params = {
     TableName: process.env.DYNAMODB_TABLE,
     Key: {
@@ -10,24 +9,36 @@ module.exports.get = (event, context, callback) => {
     },
   };
 
-  // fetch todo from the database
-  dynamodb.get(params, (error, result) => {
-    // handle potential errors
-    if (error) {
-      console.error(error);
-      callback(null, {
-        statusCode: error.statusCode || 501,
-        headers: { 'Content-Type': 'text/plain' },
-        body: 'Couldn\'t fetch the todo item.',
-      });
-      return;
+  try {
+    const result = await docClient.send(new GetCommand(params));
+    if (result.Item) {
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify(result.Item),
+      };
+    } else {
+      return {
+        statusCode: 404,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({ error: 'Todo item not found.' }),
+      };
     }
-
-    // create a response
-    const response = {
-      statusCode: 200,
-      body: JSON.stringify(result.Item),
+  } catch (error) {
+    console.error(error);
+    return {
+      statusCode: error.statusCode || 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ error: 'Couldn\'t fetch the todo item.' }),
     };
-    callback(null, response);
-  });
+  }
 };

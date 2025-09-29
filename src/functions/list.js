@@ -1,30 +1,30 @@
-'use strict';
+const { ScanCommand } = require('@aws-sdk/lib-dynamodb');
+const docClient = require('./dynamodb');
 
-const dynamodb = require('./dynamodb');
-
-module.exports.list = (event, context, callback) => {
+module.exports.list = async () => {
   const params = {
     TableName: process.env.DYNAMODB_TABLE,
   };
 
-  // fetch all todos from the database
-  dynamodb.scan(params, (error, result) => {
-    // handle potential errors
-    if (error) {
-      console.error(error);
-      callback(null, {
-        statusCode: error.statusCode || 501,
-        headers: { 'Content-Type': 'text/plain' },
-        body: 'Couldn\'t fetch the todo item.',
-      });
-      return;
-    }
-
-    // create a response
-    const response = {
+  try {
+    const result = await docClient.send(new ScanCommand(params));
+    return {
       statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
       body: JSON.stringify(result.Items),
     };
-    callback(null, response);
-  });
+  } catch (error) {
+    console.error(error);
+    return {
+      statusCode: error.statusCode || 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ error: 'Couldn\'t fetch the todo items.' }),
+    };
+  }
 };

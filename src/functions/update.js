@@ -1,20 +1,20 @@
-'use strict';
+const { UpdateCommand } = require('@aws-sdk/lib-dynamodb');
+const docClient = require('./dynamodb');
 
-const dynamodb = require('./dynamodb');
-
-module.exports.update = (event, context, callback) => {
+module.exports.update = async (event) => {
   const timestamp = new Date().getTime();
   const data = JSON.parse(event.body);
 
-  // validation
   if (typeof data.text !== 'string' || typeof data.checked !== 'boolean') {
     console.error('Validation Failed');
-    callback(null, {
+    return {
       statusCode: 400,
-      headers: { 'Content-Type': 'text/plain' },
-      body: 'Couldn\'t update the todo item.',
-    });
-    return;
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ error: 'Couldn\'t update the todo item.' }),
+    };
   }
 
   const params = {
@@ -34,24 +34,25 @@ module.exports.update = (event, context, callback) => {
     ReturnValues: 'ALL_NEW',
   };
 
-  // update the todo in the database
-  dynamodb.update(params, (error, result) => {
-    // handle potential errors
-    if (error) {
-      console.error(error);
-      callback(null, {
-        statusCode: error.statusCode || 501,
-        headers: { 'Content-Type': 'text/plain' },
-        body: 'Couldn\'t update the todo item.',
-      });
-      return;
-    }
-
-    // create a response
-    const response = {
+  try {
+    const result = await docClient.send(new UpdateCommand(params));
+    return {
       statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
       body: JSON.stringify(result.Attributes),
     };
-    callback(null, response);
-  });
+  } catch (error) {
+    console.error(error);
+    return {
+      statusCode: error.statusCode || 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ error: 'Couldn\'t update the todo item.' }),
+    };
+  }
 };
