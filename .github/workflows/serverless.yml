@@ -20,14 +20,23 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
+    - name: serverless login
+      uses: serverless/github-action@v4.0.0
+      with:
+        args: login
+      env:
+        SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
     - name: serverless validate
-      uses: serverless/github-action@v4.0
+      uses: serverless/github-action@v4.0.0
       with:
         args: print
+      env:
+        SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
     - name: serverless deploy
-      uses: serverless/github-action@v4.0
+      uses: serverless/github-action@v4.0.0
       with:
         args: deploy
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
