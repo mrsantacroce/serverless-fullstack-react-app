@@ -24,7 +24,7 @@ provider:
 
 resources:
   Resources:
-    TodosDynamoDbTable:
+    DynamoDbTable:
       Type: 'AWS::DynamoDB::Table'
       DeletionPolicy: Retain
       Properties:
