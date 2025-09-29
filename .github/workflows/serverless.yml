@@ -40,3 +40,27 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+    - name: Get API endpoint
+      id: api-info
+      uses: serverless/github-action@v4.0.0
+      with:
+        args: info --verbose
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+    - name: Extract API endpoint
+      id: extract-endpoint
+      run: |
+        ENDPOINT=$(npx serverless info --verbose 2>&1 | grep -oP 'https://[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com/[a-z0-9]+' | head -1)
+        echo "API_ENDPOINT=$ENDPOINT" >> $GITHUB_ENV
+        echo "Extracted endpoint: $ENDPOINT"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    - name: Test API endpoints
+      run: |
+        chmod +x ./test-api.sh
+        ./test-api.sh
+      env:
+        API_ENDPOINT: ${{ env.API_ENDPOINT }}
