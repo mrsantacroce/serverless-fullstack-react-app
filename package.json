@@ -1,0 +1,14 @@
+{
+  "name": "serverless-fullstack-react-app",
+  "version": "1.0.0",
+  "description": "Serverless fullstack React application",
+  "scripts": {
+    "validate": "serverless print",
+    "deploy": "serverless deploy",
+    "remove": "serverless remove"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serverless": "^4.0.0"
+  }
+}

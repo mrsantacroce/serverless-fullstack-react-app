@@ -20,6 +20,10 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
+    - name: serverless validate
+      uses: serverless/github-action@v4.0
+      with:
+        args: print
     - name: serverless deploy
       uses: serverless/github-action@v4.0
       with:
