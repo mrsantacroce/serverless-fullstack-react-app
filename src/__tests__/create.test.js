@@ -1,5 +1,3 @@
-const { create } = require('../functions/create');
-
 // Mock the AWS SDK
 jest.mock('@aws-sdk/lib-dynamodb', () => ({
   PutCommand: jest.fn(),
@@ -15,8 +13,10 @@ jest.mock('uuid', () => ({
 // Mock the docClient
 const mockSend = jest.fn();
 jest.mock('../functions/dynamodb', () => ({
-  send: mockSend,
+  send: (...args) => mockSend(...args),
 }));
+
+const { create } = require('../functions/create');
 
 describe('create function', () => {
   beforeEach(() => {
