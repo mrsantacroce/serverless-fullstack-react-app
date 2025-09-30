@@ -4,17 +4,56 @@ const docClient = require('./dynamodb');
 
 module.exports.create = async (event) => {
   const timestamp = new Date().getTime();
-  const data = JSON.parse(event.body);
+  const maxLength = parseInt(process.env.MAX_TODO_LENGTH) || 500;
 
-  if (typeof data.text !== 'string') {
-    console.error('Validation Failed');
+  let data;
+  try {
+    data = JSON.parse(event.body);
+  } catch (error) {
     return {
       statusCode: 400,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({ error: 'Couldn\'t create the todo item.' }),
+      body: JSON.stringify({ error: 'Invalid JSON in request body' }),
+    };
+  }
+
+  // Validation
+  if (typeof data.text !== 'string') {
+    console.error('Validation Failed: text is not a string');
+    return {
+      statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ error: 'Todo text must be a string' }),
+    };
+  }
+
+  if (data.text.trim().length === 0) {
+    console.error('Validation Failed: text is empty');
+    return {
+      statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ error: 'Todo text cannot be empty' }),
+    };
+  }
+
+  if (data.text.length > maxLength) {
+    console.error(`Validation Failed: text exceeds ${maxLength} characters`);
+    return {
+      statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({ error: `Todo text must be ${maxLength} characters or less` }),
     };
   }
 

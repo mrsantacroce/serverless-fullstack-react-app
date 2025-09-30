@@ -2,6 +2,18 @@ service: serverless-fullstack-react-app
 
 frameworkVersion: ">=4.0.0"
 
+custom:
+  # Stage-specific CORS origins
+  corsOrigins:
+    dev:
+      - http://localhost:3000
+      - http://localhost:3001
+    prod:
+      - https://d343w4jgkgubbi.cloudfront.net  # Update with your actual CloudFront URL after first deploy
+
+  # Get current stage's CORS origins
+  currentCorsOrigins: ${self:custom.corsOrigins.${opt:stage, self:provider.stage}, self:custom.corsOrigins.dev}
+
 provider:
   name: aws
   region: us-east-1
@@ -9,10 +21,12 @@ provider:
   stage: dev
   environment:
     DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+    MAX_TODO_LENGTH: 500
   apiGateway:
     throttle:
       burstLimit: 200      # Maximum concurrent requests
       rateLimit: 100       # Requests per second (steady state)
+    minimumCompressionSize: 1024  # Compress responses > 1KB
   iam:
     role:
       statements:
@@ -33,7 +47,14 @@ functions:
       - http:
           path: todos
           method: post
-          cors: true
+          cors:
+            origin: ${self:custom.currentCorsOrigins}
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+            allowCredentials: false
 
   list:
     handler: src/functions/list.list
@@ -41,7 +62,14 @@ functions:
       - http:
           path: todos
           method: get
-          cors: true
+          cors:
+            origin: ${self:custom.currentCorsOrigins}
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+            allowCredentials: false
 
   get:
     handler: src/functions/get.get
@@ -49,7 +77,14 @@ functions:
       - http:
           path: todos/{id}
           method: get
-          cors: true
+          cors:
+            origin: ${self:custom.currentCorsOrigins}
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+            allowCredentials: false
 
   update:
     handler: src/functions/update.update
@@ -57,7 +92,14 @@ functions:
       - http:
           path: todos/{id}
           method: put
-          cors: true
+          cors:
+            origin: ${self:custom.currentCorsOrigins}
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+            allowCredentials: false
 
   delete:
     handler: src/functions/delete.delete
@@ -65,7 +107,14 @@ functions:
       - http:
           path: todos/{id}
           method: delete
-          cors: true
+          cors:
+            origin: ${self:custom.currentCorsOrigins}
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+            allowCredentials: false
 
 resources:
   Resources:
