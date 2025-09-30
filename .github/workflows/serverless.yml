@@ -73,13 +73,13 @@ jobs:
       run: |
         echo "Getting stack outputs..."
         npx serverless info --verbose
-        BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name serverless-fullstack-react-app-dev --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
+        BUCKET_NAME=$(aws cloudformation describe-stacks --region us-east-1 --stack-name serverless-fullstack-react-app-dev --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
         echo "Deploying to bucket: $BUCKET_NAME"
         if [ -z "$BUCKET_NAME" ]; then
           echo "ERROR: Could not get bucket name"
           exit 1
         fi
-        aws s3 sync client/out s3://$BUCKET_NAME --delete
+        aws s3 sync client/out s3://$BUCKET_NAME --delete --region us-east-1
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -87,9 +87,13 @@ jobs:
 
     - name: Invalidate CloudFront Cache
       run: |
-        DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Origins.Items[?Id=='S3Origin']].Id" --output text)
+        DISTRIBUTION_ID=$(aws cloudfront list-distributions --region us-east-1 --query "DistributionList.Items[?Origins.Items[?Id=='S3Origin']].Id" --output text)
         echo "Invalidating CloudFront distribution: $DISTRIBUTION_ID"
-        aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
+        if [ -z "$DISTRIBUTION_ID" ]; then
+          echo "WARNING: Could not find CloudFront distribution, skipping cache invalidation"
+        else
+          aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
+        fi
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
