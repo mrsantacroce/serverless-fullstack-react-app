@@ -5,7 +5,9 @@
   "scripts": {
     "validate": "serverless print",
     "deploy": "serverless deploy",
-    "remove": "serverless remove"
+    "remove": "serverless remove",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.600.0",
@@ -13,6 +15,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "serverless": "^4.0.0"
+    "serverless": "^4.0.0",
+    "jest": "^29.7.0"
   }
 }

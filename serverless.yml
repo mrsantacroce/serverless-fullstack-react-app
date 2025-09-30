@@ -3,17 +3,22 @@ service: serverless-fullstack-react-app
 frameworkVersion: ">=4.0.0"
 
 custom:
-  # Stage-specific CORS origins
-  corsOrigins:
-    dev:
-      - http://localhost:3000
-      - http://localhost:3001
-      - https://d343w4jgkgubbi.cloudfront.net # For Dev
-    prod:
-      - https://d343w4jgkgubbi.cloudfront.net  # Update with your actual CloudFront URL after first deploy
+  # Stage-specific CORS origin (single value or wildcard)
+  corsOrigin:
+    dev: '*'  # Allow all origins for dev (use specific domain in prod)
+    prod: 'https://d343w4jgkgubbi.cloudfront.net'
 
-  # Get current stage's CORS origins
-  currentCorsOrigins: ${self:custom.corsOrigins.${opt:stage, self:provider.stage}, self:custom.corsOrigins.dev}
+  # Get current stage's CORS origin
+  currentCorsOrigin: ${self:custom.corsOrigin.${opt:stage, self:provider.stage}, self:custom.corsOrigin.dev}
+
+package:
+  exclude:
+    - client/**
+    - .github/**
+    - .git/**
+    - .next/**
+    - out/**
+    - README.md
 
 provider:
   name: aws
@@ -24,10 +29,11 @@ provider:
     DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
     MAX_TODO_LENGTH: 500
   apiGateway:
-    throttle:
-      burstLimit: 200      # Maximum concurrent requests
-      rateLimit: 100       # Requests per second (steady state)
     minimumCompressionSize: 1024  # Compress responses > 1KB
+    usagePlan:
+      throttle:
+        burstLimit: 200      # Maximum concurrent requests
+        rateLimit: 100       # Requests per second (steady state)
   iam:
     role:
       statements:
@@ -49,7 +55,7 @@ functions:
           path: todos
           method: post
           cors:
-            origin: ${self:custom.currentCorsOrigins}
+            origin: ${self:custom.currentCorsOrigin}
             headers:
               - Content-Type
               - X-Amz-Date
@@ -64,7 +70,7 @@ functions:
           path: todos
           method: get
           cors:
-            origin: ${self:custom.currentCorsOrigins}
+            origin: ${self:custom.currentCorsOrigin}
             headers:
               - Content-Type
               - X-Amz-Date
@@ -79,7 +85,7 @@ functions:
           path: todos/{id}
           method: get
           cors:
-            origin: ${self:custom.currentCorsOrigins}
+            origin: ${self:custom.currentCorsOrigin}
             headers:
               - Content-Type
               - X-Amz-Date
@@ -94,7 +100,7 @@ functions:
           path: todos/{id}
           method: put
           cors:
-            origin: ${self:custom.currentCorsOrigins}
+            origin: ${self:custom.currentCorsOrigin}
             headers:
               - Content-Type
               - X-Amz-Date
@@ -109,7 +115,7 @@ functions:
           path: todos/{id}
           method: delete
           cors:
-            origin: ${self:custom.currentCorsOrigins}
+            origin: ${self:custom.currentCorsOrigin}
             headers:
               - Content-Type
               - X-Amz-Date
