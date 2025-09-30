@@ -103,7 +103,11 @@ jobs:
         echo "==================================="
         echo "Deployment Complete!"
         echo "==================================="
-        npx serverless info --verbose | grep -E "(FrontendURL|ServiceEndpoint)"
+        FRONTEND_URL=$(aws cloudformation describe-stacks --region us-east-1 --stack-name serverless-fullstack-react-app-dev --query "Stacks[0].Outputs[?OutputKey=='FrontendURL'].OutputValue" --output text)
+        API_URL=$(aws cloudformation describe-stacks --region us-east-1 --stack-name serverless-fullstack-react-app-dev --query "Stacks[0].Outputs[?OutputKey=='ServiceEndpoint'].OutputValue" --output text)
+        echo "Frontend URL: $FRONTEND_URL"
+        echo "API Endpoint: $API_URL"
+        echo "==================================="
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
