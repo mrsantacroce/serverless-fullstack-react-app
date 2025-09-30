@@ -59,11 +59,13 @@ jobs:
 
     - name: Build Frontend
       run: |
-        cd client
-        npm ci
         # Get API endpoint for build
         API_ENDPOINT=$(npx serverless info --verbose 2>&1 | grep -E "https://.*\.execute-api\..*\.amazonaws\.com/[^/]+" | grep -oE "https://[^/]+/[^/]+" | head -1)
+        echo "Building with API endpoint: $API_ENDPOINT"
+        cd client
+        npm ci
         echo "NEXT_PUBLIC_API_URL=$API_ENDPOINT" > .env.local
+        cat .env.local
         npm run build
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
