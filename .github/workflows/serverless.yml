@@ -71,8 +71,14 @@ jobs:
 
     - name: Deploy Frontend to S3
       run: |
-        BUCKET_NAME=$(npx serverless info --verbose 2>&1 | grep "FrontendBucketName" | awk '{print $2}')
+        echo "Getting stack outputs..."
+        npx serverless info --verbose
+        BUCKET_NAME=$(aws cloudformation describe-stacks --stack-name serverless-fullstack-react-app-dev --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
         echo "Deploying to bucket: $BUCKET_NAME"
+        if [ -z "$BUCKET_NAME" ]; then
+          echo "ERROR: Could not get bucket name"
+          exit 1
+        fi
         aws s3 sync client/out s3://$BUCKET_NAME --delete
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
