@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# API Gateway endpoint
-API_ENDPOINT="TODO"
+# API Gateway endpoint (passed via environment variable or use default)
+API_ENDPOINT="${API_ENDPOINT:-TODO}"
 
 echo "Testing Serverless Todo API"
 echo "API Endpoint: $API_ENDPOINT"
