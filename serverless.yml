@@ -8,6 +8,7 @@ custom:
     dev:
       - http://localhost:3000
       - http://localhost:3001
+      - https://d343w4jgkgubbi.cloudfront.net # For Dev
     prod:
       - https://d343w4jgkgubbi.cloudfront.net  # Update with your actual CloudFront URL after first deploy
 
