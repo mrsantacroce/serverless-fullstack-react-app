@@ -9,6 +9,10 @@ provider:
   stage: dev
   environment:
     DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  apiGateway:
+    throttle:
+      burstLimit: 200      # Maximum concurrent requests
+      rateLimit: 100       # Requests per second (steady state)
   iam:
     role:
       statements:
