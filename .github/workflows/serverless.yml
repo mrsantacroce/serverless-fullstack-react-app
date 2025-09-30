@@ -40,6 +40,7 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+  test:
     - name: Get API endpoint
       id: api-info
       uses: serverless/github-action@v4.0.0
@@ -60,7 +61,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     - name: Test API endpoints
       run: |
-        chmod +x ./test-api.sh
-        ./test-api.sh
+        chmod +x ./utils/test-api.sh
+        ./utils/test-api.sh
       env:
         API_ENDPOINT: ${{ env.API_ENDPOINT }}
