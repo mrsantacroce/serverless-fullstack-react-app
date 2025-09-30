@@ -56,3 +56,43 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+
+    - name: Build Frontend
+      run: |
+        cd client
+        npm ci
+        # Get API endpoint for build
+        API_ENDPOINT=$(npx serverless info --verbose 2>&1 | grep -E "https://.*\.execute-api\..*\.amazonaws\.com/[^/]+" | grep -oE "https://[^/]+/[^/]+" | head -1)
+        echo "NEXT_PUBLIC_API_URL=$API_ENDPOINT" > .env.local
+        npm run build
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Deploy Frontend to S3
+      run: |
+        BUCKET_NAME=$(npx serverless info --verbose 2>&1 | grep "FrontendBucketName" | awk '{print $2}')
+        echo "Deploying to bucket: $BUCKET_NAME"
+        aws s3 sync client/out s3://$BUCKET_NAME --delete
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Invalidate CloudFront Cache
+      run: |
+        DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Origins.Items[?Id=='S3Origin']].Id" --output text)
+        echo "Invalidating CloudFront distribution: $DISTRIBUTION_ID"
+        aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Display URLs
+      run: |
+        echo "==================================="
+        echo "Deployment Complete!"
+        echo "==================================="
+        npx serverless info --verbose | grep -E "(FrontendURL|ServiceEndpoint)"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
