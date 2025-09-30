@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Todo } from '@/app/page';
+import { validateTodoText, MAX_TODO_LENGTH } from '@/lib/validation';
 
 interface TodoItemProps {
   todo: Todo;
@@ -14,6 +15,7 @@ export default function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
   const [editText, setEditText] = useState(todo.text);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleToggle = async () => {
     setIsUpdating(true);
@@ -25,11 +27,19 @@ export default function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
   };
 
   const handleSave = async () => {
-    if (!editText.trim()) return;
+    const validation = validateTodoText(editText);
+    if (!validation.isValid) {
+      setError(validation.error || 'Invalid input');
+      return;
+    }
+
     setIsUpdating(true);
+    setError(null);
     try {
       await onUpdate(todo.id, editText.trim(), todo.checked);
       setIsEditing(false);
+    } catch (err) {
+      setError('Failed to update todo');
     } finally {
       setIsUpdating(false);
     }
@@ -38,6 +48,7 @@ export default function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
   const handleCancel = () => {
     setEditText(todo.text);
     setIsEditing(false);
+    setError(null);
   };
 
   const handleDelete = async () => {
@@ -50,6 +61,9 @@ export default function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
     }
   };
 
+  const remainingChars = MAX_TODO_LENGTH - editText.length;
+  const showCharCount = editText.length > MAX_TODO_LENGTH * 0.8;
+
   return (
     <div
       className={`bg-white rounded-lg shadow-sm border-2 transition-all ${
@@ -58,7 +72,6 @@ export default function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
     >
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3 sm:gap-4">
-          {/* Checkbox */}
           <button
             onClick={handleToggle}
             disabled={isUpdating || isDeleting}
@@ -83,18 +96,35 @@ export default function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
             )}
           </button>
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
             {isEditing ? (
               <div className="space-y-3">
-                <input
-                  type="text"
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  className="w-full px-3 py-2 text-base border-2 border-blue-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                  disabled={isUpdating}
-                />
+                <div>
+                  <input
+                    type="text"
+                    value={editText}
+                    onChange={(e) => {
+                      setEditText(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    className={`w-full px-3 py-2 text-base border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      error ? 'border-red-500' : 'border-blue-500'
+                    }`}
+                    autoFocus
+                    disabled={isUpdating}
+                    maxLength={MAX_TODO_LENGTH}
+                  />
+                  {showCharCount && (
+                    <p className={`text-xs mt-1 ${remainingChars < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                      {remainingChars} characters remaining
+                    </p>
+                  )}
+                </div>
+                {error && (
+                  <div className="text-red-600 text-xs bg-red-50 border border-red-200 px-3 py-1 rounded">
+                    {error}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={handleSave}
@@ -136,7 +166,6 @@ export default function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
             )}
           </div>
 
-          {/* Actions */}
           {!isEditing && (
             <div className="flex flex-col sm:flex-row gap-2">
               <button
