@@ -39,7 +39,7 @@ export default function TodoItem({ todo, onUpdate, onDelete }: TodoItemProps) {
     try {
       await onUpdate(todo.id, editText.trim(), todo.checked);
       setIsEditing(false);
-    } catch (err) {
+    } catch {
       setError('Failed to update todo');
     } finally {
       setIsUpdating(false);
