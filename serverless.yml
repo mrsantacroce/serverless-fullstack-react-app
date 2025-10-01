@@ -6,7 +6,7 @@ custom:
   # Stage-specific CORS origin (single value or wildcard)
   corsOrigin:
     dev: '*'  # Allow all origins for dev (use specific domain in prod)
-    prod: 'https://d343w4jgkgubbi.cloudfront.net'
+    prod: 'https://d3f3z8uaga4kw3.cloudfront.net'
 
   # Get current stage's CORS origin
   currentCorsOrigin: ${self:custom.corsOrigin.${opt:stage, self:provider.stage}, self:custom.corsOrigin.dev}
