@@ -2,9 +2,19 @@
 
 A production-ready, serverless todo application built with AWS Lambda, API Gateway, DynamoDB, and React. Features multi-stage deployments, comprehensive testing, and automated CI/CD pipeline.
 
-**Live Application:** [https://d343w4jgkgubbi.cloudfront.net](https://d343w4jgkgubbi.cloudfront.net)
+**Live Prod Application:** [https://d3f3z8uaga4kw3.cloudfront.net/](https://d3f3z8uaga4kw3.cloudfront.net/)
 
-**Video Walkthrough:** [Coming soon - Loom video]
+**Video Walkthrough:** [Loom video](todo)
+A Loom video walkthrough covering:
+- Application architecture and design decisions
+- Code organization and best practices
+- Infrastructure as Code with Serverless Framework
+- CI/CD pipeline demonstration
+- Testing strategy
+- Live application demo
+
+**NOTES**
+- Next steps would be implementing Cognito functionality and improving the frontend and integration tests to account for this.
 
 ---
 
@@ -26,8 +36,8 @@ A production-ready, serverless todo application built with AWS Lambda, API Gatew
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                          CloudFront CDN                          │
-│                   (d343w4jgkgubbi.cloudfront.net)               │
+│                          CloudFront CDN                         │
+│                   (d3f3z8uaga4kw3.cloudfront.net)               │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
@@ -38,10 +48,10 @@ A production-ready, serverless todo application built with AWS Lambda, API Gatew
                          │
                          │ API Calls
                          ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       API Gateway (REST)                         │
-│         https://n90t8ca9vi.execute-api.us-east-1.../dev        │
-└────────────┬────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                       API Gateway (REST)                           │
+│         https://jsvqqyg2k5.execute-api.us-east-1.amazonaws.com/prod│
+└────────────┬───────────────────────────────────────────────────────┘
              │
              ▼
     ┌────────────────┐
@@ -572,18 +582,6 @@ Each stage gets its own:
 - Validation errors with descriptive messages
 - Database error handling
 - Frontend error state management
-
----
-
-## 🎥 Video Walkthrough
-
-**Coming Soon**: A Loom video walkthrough covering:
-- Application architecture and design decisions
-- Code organization and best practices
-- Infrastructure as Code with Serverless Framework
-- CI/CD pipeline demonstration
-- Testing strategy
-- Live application demo
 
 ---
 
