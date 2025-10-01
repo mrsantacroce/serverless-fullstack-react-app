@@ -4,8 +4,7 @@ A production-ready, serverless todo application built with AWS Lambda, API Gatew
 
 **Live Prod Application:** [https://d3f3z8uaga4kw3.cloudfront.net/](https://d3f3z8uaga4kw3.cloudfront.net/)
 
-**Video Walkthrough:** [Loom video](todo)
-A Loom video walkthrough covering:
+**Video Walkthrough:** [A Loom video walkthrough covering:](https://www.loom.com/share/0e275145c7f945b9aa97e8f188c1d608?sid=e730bff5-cf54-417c-a85a-de67c650749b)
 - Application architecture and design decisions
 - Code organization and best practices
 - Infrastructure as Code with Serverless Framework
