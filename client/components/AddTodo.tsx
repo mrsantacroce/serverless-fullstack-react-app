@@ -33,7 +33,7 @@ export default function AddTodo({ onAdd }: AddTodoProps) {
     try {
       await onAdd(text.trim());
       setText('');
-    } catch (err) {
+    } catch {
       setError('Failed to add todo. Please try again.');
     } finally {
       setIsSubmitting(false);
