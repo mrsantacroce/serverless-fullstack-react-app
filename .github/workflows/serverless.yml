@@ -1,4 +1,4 @@
-name: Deploy Serverless
+name: Deploy Serverless Resources and Frontend
 
 # Deployment Strategy:
 # - All branches (except master) deploy to 'dev' stage
@@ -110,26 +110,6 @@ jobs:
         echo "NEXT_PUBLIC_API_URL=$API_ENDPOINT" > .env.production
         cat .env.production
         npm run build
-
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-build
-        path: client/out/
-        retention-days: 1
-
-  deploy-frontend:
-    name: Deploy Frontend
-    runs-on: ubuntu-latest
-    needs: [deploy-backend, build-frontend]
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Download Build Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build
-        path: client/out/
 
     - name: Deploy Frontend to S3
       run: |
