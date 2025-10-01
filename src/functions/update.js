@@ -1,4 +1,4 @@
-const { UpdateCommand } = require('@aws-sdk/lib-dynamodb');
+const { UpdateCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
 const docClient = require('./dynamodb');
 
 module.exports.update = async (event) => {
@@ -56,24 +56,45 @@ module.exports.update = async (event) => {
     };
   }
 
-  const params = {
+  // First, check if the item exists
+  const getParams = {
     TableName: process.env.DYNAMODB_TABLE,
     Key: {
       id: event.pathParameters.id,
     },
-    ExpressionAttributeNames: {
-      '#todo_text': 'text',
-    },
-    ExpressionAttributeValues: {
-      ':text': data.text,
-      ':checked': data.checked,
-      ':updatedAt': timestamp,
-    },
-    UpdateExpression: 'SET #todo_text = :text, checked = :checked, updatedAt = :updatedAt',
-    ReturnValues: 'ALL_NEW',
   };
 
   try {
+    const existing = await docClient.send(new GetCommand(getParams));
+
+    if (!existing.Item) {
+      return {
+        statusCode: 404,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({ error: 'Todo item not found' }),
+      };
+    }
+
+    const params = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: event.pathParameters.id,
+      },
+      ExpressionAttributeNames: {
+        '#todo_text': 'text',
+      },
+      ExpressionAttributeValues: {
+        ':text': data.text,
+        ':checked': data.checked,
+        ':updatedAt': timestamp,
+      },
+      UpdateExpression: 'SET #todo_text = :text, checked = :checked, updatedAt = :updatedAt',
+      ReturnValues: 'ALL_NEW',
+    };
+
     const result = await docClient.send(new UpdateCommand(params));
     return {
       statusCode: 200,
