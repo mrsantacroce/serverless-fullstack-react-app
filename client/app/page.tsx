@@ -14,10 +14,19 @@ export interface Todo {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// Determine environment from API URL
+const getEnvironment = () => {
+  if (!API_URL) return 'unknown';
+  if (API_URL.includes('/prod')) return 'prod';
+  if (API_URL.includes('/dev')) return 'dev';
+  return 'local';
+};
+
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const environment = getEnvironment();
 
   const fetchTodos = async () => {
     try {
@@ -80,6 +89,19 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Environment Badge */}
+      <div className="fixed top-4 right-4 z-50">
+        <span className={`px-3 py-1 text-xs font-semibold rounded-full shadow-lg ${
+          environment === 'prod'
+            ? 'bg-green-600 text-white'
+            : environment === 'dev'
+            ? 'bg-yellow-500 text-black'
+            : 'bg-gray-500 text-white'
+        }`}>
+          {environment.toUpperCase()}
+        </span>
+      </div>
+
       <div className="container mx-auto px-4 py-8 sm:py-12 md:py-16 lg:py-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
