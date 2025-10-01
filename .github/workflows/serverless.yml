@@ -11,21 +11,37 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: deploy
+  test-unit:
+    name: Run Unit Tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.x]
-    env:
-      STAGE: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Use Node.js 20.x
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm ci
+        node-version: 20.x
+    - name: Install Dependencies
+      run: npm ci
+    - name: Run Unit Tests
+      run: npm test
+
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs: test-unit
+    env:
+      STAGE: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
+    outputs:
+      api-endpoint: ${{ steps.get-endpoint.outputs.endpoint }}
+      stage: ${{ env.STAGE }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+    - name: Install Dependencies
+      run: npm ci
     - name: serverless login
       uses: serverless/github-action@v4.0.0
       with:
@@ -38,7 +54,7 @@ jobs:
         args: print
       env:
         SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-    - name: serverless deploy
+    - name: Deploy Serverless Backend
       uses: serverless/github-action@v4.0.0
       with:
         args: deploy --stage ${{ env.STAGE }}
@@ -46,44 +62,82 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-    - name: Run Integration Tests
+
+    - name: Get API Endpoint
+      id: get-endpoint
       run: |
-        echo "Getting API endpoint for stage: ${{ env.STAGE }}"
-        npx serverless info --stage ${{ env.STAGE }} --verbose
         ENDPOINT=$(npx serverless info --stage ${{ env.STAGE }} --verbose 2>&1 | grep -E "https://.*\.execute-api\..*\.amazonaws\.com/[^/]+" | grep -oE "https://[^/]+/[^/]+" | head -1)
-        echo "Endpoint found: $ENDPOINT"
-        if [ -z "$ENDPOINT" ]; then
-          echo "ERROR: Could not extract API endpoint"
-          exit 1
-        fi
-        chmod +x ./utils/*.sh
-        API_ENDPOINT=$ENDPOINT ./utils/run-all-tests.sh
+        echo "endpoint=$ENDPOINT" >> $GITHUB_OUTPUT
+        echo "API Endpoint: $ENDPOINT"
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
 
+  test-integration:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run Integration Tests
+      run: |
+        ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
+        echo "Testing API endpoint: $ENDPOINT"
+        if [ -z "$ENDPOINT" ]; then
+          echo "ERROR: Could not get API endpoint from deploy-backend job"
+          exit 1
+        fi
+        chmod +x ./utils/*.sh
+        API_ENDPOINT=$ENDPOINT ./utils/run-all-tests.sh
+
+  build-frontend:
+    name: Build & Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, test-integration]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
     - name: Build Frontend
       run: |
-        # Get API endpoint for build
-        API_ENDPOINT=$(npx serverless info --stage ${{ env.STAGE }} --verbose 2>&1 | grep -E "https://.*\.execute-api\..*\.amazonaws\.com/[^/]+" | grep -oE "https://[^/]+/[^/]+" | head -1)
-        echo "Building with API endpoint: $API_ENDPOINT for stage: ${{ env.STAGE }}"
+        API_ENDPOINT="${{ needs.deploy-backend.outputs.api-endpoint }}"
+        echo "Building with API endpoint: $API_ENDPOINT for stage: ${{ needs.deploy-backend.outputs.stage }}"
         cd client
         npm ci
         echo "NEXT_PUBLIC_API_URL=$API_ENDPOINT" > .env.production
         cat .env.production
         npm run build
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: client/out/
+        retention-days: 1
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, build-frontend]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: client/out/
 
     - name: Deploy Frontend to S3
       run: |
-        echo "Getting stack outputs for stage: ${{ env.STAGE }}"
-        npx serverless info --stage ${{ env.STAGE }} --verbose
-        STACK_NAME=serverless-fullstack-react-app-${{ env.STAGE }}
+        STAGE="${{ needs.deploy-backend.outputs.stage }}"
+        echo "Deploying to stage: $STAGE"
+        STACK_NAME=serverless-fullstack-react-app-$STAGE
         BUCKET_NAME=$(aws cloudformation describe-stacks --region us-east-1 --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
-        echo "Deploying to bucket: $BUCKET_NAME (stage: ${{ env.STAGE }})"
+        echo "Deploying to bucket: $BUCKET_NAME (stage: $STAGE)"
         if [ -z "$BUCKET_NAME" ]; then
           echo "ERROR: Could not get bucket name"
           exit 1
@@ -96,7 +150,8 @@ jobs:
 
     - name: Invalidate CloudFront Cache
       run: |
-        STACK_NAME=serverless-fullstack-react-app-${{ env.STAGE }}
+        STAGE="${{ needs.deploy-backend.outputs.stage }}"
+        STACK_NAME=serverless-fullstack-react-app-$STAGE
         BUCKET_NAME=$(aws cloudformation describe-stacks --region us-east-1 --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" --output text)
         echo "Looking for CloudFront distribution for bucket: $BUCKET_NAME"
 
@@ -104,7 +159,7 @@ jobs:
         echo "Found CloudFront distribution: $DISTRIBUTION_ID"
 
         if [ -z "$DISTRIBUTION_ID" ] || [ "$DISTRIBUTION_ID" = "None" ]; then
-          echo "WARNING: Could not find CloudFront distribution for stage ${{ env.STAGE }}, skipping cache invalidation"
+          echo "WARNING: Could not find CloudFront distribution for stage $STAGE, skipping cache invalidation"
         else
           echo "Invalidating CloudFront distribution: $DISTRIBUTION_ID"
           aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"
@@ -113,19 +168,18 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-    - name: Display URLs
+    - name: Display Deployment Summary
       run: |
+        STAGE="${{ needs.deploy-backend.outputs.stage }}"
         echo "==================================="
-        echo "Deployment Complete! (Stage: ${{ env.STAGE }})"
+        echo "Deployment Complete! (Stage: $STAGE)"
         echo "==================================="
-        STACK_NAME=serverless-fullstack-react-app-${{ env.STAGE }}
+        STACK_NAME=serverless-fullstack-react-app-$STAGE
         FRONTEND_URL=$(aws cloudformation describe-stacks --region us-east-1 --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='FrontendURL'].OutputValue" --output text)
-        API_URL=$(aws cloudformation describe-stacks --region us-east-1 --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ServiceEndpoint'].OutputValue" --output text)
-        echo "Stage: ${{ env.STAGE }}"
+        echo "Stage: $STAGE"
         echo "Frontend URL: $FRONTEND_URL"
-        echo "API Endpoint: $API_URL"
+        echo "API Endpoint: ${{ needs.deploy-backend.outputs.api-endpoint }}"
         echo "==================================="
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
