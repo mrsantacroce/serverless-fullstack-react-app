@@ -7,7 +7,12 @@
     "deploy": "serverless deploy",
     "remove": "serverless remove",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:integration": "./utils/run-all-tests.sh",
+    "test:api": "./utils/test-api.sh",
+    "test:validation": "./utils/test-validation.sh",
+    "test:cors": "./utils/test-cors.sh",
+    "test:concurrency": "./utils/test-concurrency.sh"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.600.0",

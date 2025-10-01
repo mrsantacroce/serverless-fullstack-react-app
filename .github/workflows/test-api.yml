@@ -10,6 +10,8 @@ jobs:
     strategy:
       matrix:
         node-version: [20.x]
+    env:
+      STAGE: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
     steps:
     - uses: actions/checkout@v4
     - name: Use Node.js ${{ matrix.node-version }}
@@ -17,18 +19,18 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
-    - name: Test API
+    - name: Run Integration Tests
       run: |
-        echo "Getting API endpoint..."
-        npx serverless info --verbose
-        ENDPOINT=$(npx serverless info --verbose 2>&1 | grep -E "https://.*\.execute-api\..*\.amazonaws\.com/[^/]+" | grep -oE "https://[^/]+/[^/]+" | head -1)
+        echo "Getting API endpoint for stage: ${{ env.STAGE }}"
+        npx serverless info --stage ${{ env.STAGE }} --verbose
+        ENDPOINT=$(npx serverless info --stage ${{ env.STAGE }} --verbose 2>&1 | grep -E "https://.*\.execute-api\..*\.amazonaws\.com/[^/]+" | grep -oE "https://[^/]+/[^/]+" | head -1)
         echo "Endpoint found: $ENDPOINT"
         if [ -z "$ENDPOINT" ]; then
           echo "ERROR: Could not extract API endpoint"
           exit 1
         fi
-        chmod +x ./utils/test-api.sh
-        API_ENDPOINT=$ENDPOINT ./utils/test-api.sh
+        chmod +x ./utils/*.sh
+        API_ENDPOINT=$ENDPOINT ./utils/run-all-tests.sh
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
